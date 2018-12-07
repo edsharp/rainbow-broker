@@ -31,25 +31,22 @@ If there's a queue, you lose control if:
 Getting started
 ---------------
 
-You need to generate an SSL cert:
+## Quick start:
+
+```
+docker-compose build
+docker-compose up
+```
+
+Then browse to: https://localhost:3001/
+
+## For development:
 
 ```
 openssl genrsa -out localhost.key 2048
 openssl req -new -x509 -key localhost.key -out localhost.cert -days 3650 -subj /CN=localhost
-```
-
-For development:
-
-```
 npm install
 npm run dev
-```
-
-For production:
-
-```
-npm build
-npm start
 ```
 
 If you need to rebuild `components/logo.jsx` you can run `svg_generator.py`.
