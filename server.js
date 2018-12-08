@@ -18,8 +18,11 @@ const dev = process.env.NODE_ENV !== "production";
 const nextApp = next({ dev });
 const nextHandler = nextApp.getRequestHandler();
 
-const displays = {};
-const emitters = {};
+const registers = {
+  displays: {},
+  emitters: {},
+  buttonshims: {}
+};
 
 const mirror = {
   queue: [],
@@ -89,17 +92,17 @@ io.on("connection", socket => {
     }
     const { type, name, ...properties } = data;
     let registrar;
+    properties.socket = socket;
     if (type == "display") {
-      registrar = displays;
-      properties.socket = socket;
+      registrar = registers.displays;
       socket.on("mirror.request", () => {
         console.log(`${remoteAddress} request mirror ${name}`);
         requestMirror(name);
       });
     } else if (type == "emitter") {
-      registrar = emitters;
+      registrar = registers.emitters;
       socket.on("render", data => {
-        const display = displays[properties.display.name];
+        const display = registers.displays[properties.display.name];
         if (display && display.password == properties.display.password) {
           display.socket.emit("render", data);
         }
@@ -108,6 +111,16 @@ io.on("connection", socket => {
           mirror.lastActiveAt = now;
           socket.broadcast.emit("render.mirror", data);
         }
+      });
+    } else if (type == "buttonshim") {
+      registrar = registers.buttonshims;
+      socket.on("button.press", index => {
+        console.log(`button.press ${index}`);
+        socket.emit("render", [[255, 0, 0]]);
+      });
+      socket.on("button.release", index => {
+        console.log(`button.release ${index}`);
+        socket.emit("render", [[0, 255, 0]]);
       });
     } else {
       const message = `${remoteAddress} failed to register invalid type ${type}`;
