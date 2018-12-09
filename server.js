@@ -21,7 +21,8 @@ const nextHandler = nextApp.getRequestHandler();
 const registers = {
   displays: {},
   emitters: {},
-  buttonshims: {}
+  buttonshims: {},
+  neopixels: {}
 };
 
 const mirror = {
@@ -99,6 +100,8 @@ io.on("connection", socket => {
         console.log(`${remoteAddress} request mirror ${name}`);
         requestMirror(name);
       });
+    } else if (type == "neopixel") {
+      registrar = registers.neopixels;
     } else if (type == "emitter") {
       registrar = registers.emitters;
       socket.on("render", data => {
@@ -109,7 +112,15 @@ io.on("connection", socket => {
         if (mirror.displaying == properties.display.name) {
           const now = new Date().getTime();
           mirror.lastActiveAt = now;
-          socket.broadcast.emit("render.mirror", data);
+          for (const name in registers.displays) {
+            const display = registers.displays[name]
+            display.socket.emit("render.mirror", data);
+          }
+          for (const name in registers.neopixels) {
+            const neopixel = registers.neopixels[name]
+            console.log(`emit to ${neopixel}`)
+            neopixel.socket.emit("render.mirror", data);
+          }
         }
       });
     } else if (type == "buttonshim") {
@@ -117,10 +128,14 @@ io.on("connection", socket => {
       socket.on("button.press", index => {
         console.log(`button.press ${index}`);
         socket.emit("render", [[255, 0, 0]]);
+        # FIXME: This should not globally rebroadcast
+        socket.broadcast.emit("button.press", index);
       });
       socket.on("button.release", index => {
         console.log(`button.release ${index}`);
         socket.emit("render", [[0, 255, 0]]);
+        # FIXME: This should not globally rebroadcast
+        socket.broadcast.emit("button.release", index);
       });
     } else {
       const message = `${remoteAddress} failed to register invalid type ${type}`;
